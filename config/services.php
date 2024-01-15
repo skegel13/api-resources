@@ -31,4 +31,7 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'store_api' => [
+        'url' => env('STORE_API_URL'),
+    ],
 ];
