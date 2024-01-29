@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\StoreApiException;
 use App\Support\ApiRequest;
 use App\Support\StoreApiClient;
 use Illuminate\Http\Client\Request;
@@ -23,3 +24,13 @@ it('sets the base url', function () {
         return true;
     });
 });
+
+it('throws a StoreApiException', function () {
+    // Arrange
+    Http::resetStubs();
+    Http::fakeSequence()->pushStatus(404);
+    $request = ApiRequest::get('products');
+
+    // Act
+    app(StoreApiClient::class)->send($request);
+})->throws(StoreApiException::class, exceptionCode: 404);

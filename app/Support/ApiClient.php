@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use App\Exceptions\ApiException;
+use App\Exceptions\Contracts\ApiExceptionInterface;
+use Exception;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -14,22 +17,41 @@ use Illuminate\Support\Facades\Http;
  * Subclasses must implement the baseUrl method to specify the base URL for the
  * API.
  */
-
 abstract class ApiClient
 {
+    protected string $exceptionClass = ApiException::class;
+
     /**
      * Send an ApiRequest to the API and return the response.
+     * @throws ApiException
+     * @throws Exception
      */
     public function send(ApiRequest $request): Response
     {
-        return $this->getBaseRequest()
-            ->withHeaders($request->getHeaders())
-            ->{$request->getMethod()->value}(
-                $request->getUri(),
-                $request->getMethod() === HttpMethod::GET
-                    ? $request->getQuery()
-                    : $request->getBody()
+        try {
+            return $this->getBaseRequest()
+                ->withHeaders($request->getHeaders())
+                ->{$request->getMethod()->value}(
+                    $request->getUri(),
+                    $request->getMethod() === HttpMethod::GET
+                        ? $request->getQuery()
+                        : $request->getBody()
+                );
+        } catch (Exception $exception) {
+            if (! is_subclass_of($this->exceptionClass, ApiExceptionInterface::class)) {
+                // If the exceptionClass does not implement the ApiExceptionInterface,
+                // let's just throw the caught exception since we don't know how to instantiate
+                // the exceptionClass.
+                throw $exception;
+            }
+
+            // Create our new exception and throw it.
+            throw new $this->exceptionClass(
+                request: $request,
+                response: $exception?->response,
+                previous: $exception,
             );
+        }
     }
 
     /**
